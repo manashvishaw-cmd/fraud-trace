@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Case File — Fraud Incident Organizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --kraft: #DCCFB0;
+    --kraft-dark: #C9B991;
+    --paper: #F4EFE2;
+    --ink: #23323C;
+    --ink-soft: #5B6B72;
+    --stamp: #A6362C;
+    --amber: #B87A1E;
+    --teal: #3D7068;
+    --redact: #17171A;
+    --line: rgba(35,50,60,0.18);
+    --font-head: "Zilla Slab", Georgia, "Times New Roman", serif;
+    --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --bg: var(--kraft);
+    --surface: var(--paper);
+    --text: var(--ink);
+    --text-soft: var(--ink-soft);
+    --border: var(--line);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1B1712;
+      --surface: #241F19;
+      --text: #EDE4D3;
+      --text-soft: #B3A891;
+      --border: rgba(237,228,211,0.16);
+      --kraft-dark: #2E2718;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1712;
+    --surface: #241F19;
+    --text: #EDE4D3;
+    --text-soft: #B3A891;
+    --border: rgba(237,228,211,0.16);
+    --kraft-dark: #2E2718;
+  }
+  * { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  h1, h2, h3 { font-family: var(--font-head); margin: 0; color: var(--text); }
+  a { color: inherit; }
+  button { font-family: var(--font-mono); cursor: pointer; }
+  input, textarea, select { font-family: var(--font-mono); }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  header.masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  header.masthead .title-block h1 {
+    font-size: clamp(22px, 4vw, 30px);
+    letter-spacing: 0.2px;
+  }
+  header.masthead .title-block .sub {
+    color: var(--text-soft);
+    font-size: 12.5px;
+    margin-top: 4px;
+  }
+  .case-stamp {
+    border: 2px solid var(--stamp);
+    color: var(--stamp);
+    font-family: var(--font-head);
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 3px;
+    transform: rotate(-2deg);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 210px 1fr;
+    gap: 22px;
+  }
+  @media (max-width: 780px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  nav.rail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  nav.rail button.step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    padding: 10px 10px;
+    color: var(--text-soft);
+    border-radius: 2px;
+  }
+  nav.rail button.step .n {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-soft);
+    min-width: 18px;
+  }
+  nav.rail button.step .label { font-size: 12.5px; line-height: 1.35; }
+  nav.rail button.step.active {
+    background: var(--surface);
+    border-left-color: var(--stamp);
+    color: var(--text);
+  }
+  nav.rail button.step.active .n { color: var(--stamp); }
+  nav.rail button.step .flag {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 10.5px;
+    color: var(--amber);
+  }
+
+  main.sheet {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 26px 26px 22px;
+    min-height: 480px;
+    position: relative;
+  }
+  main.sheet::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: repeating-linear-gradient(180deg, var(--border) 0 6px, transparent 6px 12px);
+  }
+  .sheet h2 {
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+  .sheet .lede {
+    color: var(--text-soft);
+    font-size: 12.5px;
+    margin-bottom: 20px;
+    max-width: 62ch;
+  }
+
+  .field-row { margin-bottom: 14px; }
+  .field-row label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-soft);
+    margin-bottom: 5px;
+  }
+  .field-row input[type=text], .field-row textarea, .field-row select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+  .field-row textarea { min-height: 84px; resize: vertical; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .btn.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.danger { background: var(--stamp); color: #fff; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .evidence-list { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .evidence-card {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px 14px;
+    background: var(--bg);
+  }
+  .evidence-card .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 7px;
+    border-radius: 20px;
+    border: 1px solid currentColor;
+  }
+  .tag.message { color: var(--teal); }
+  .tag.screenshot { color: var(--amber); }
+  .tag.transaction { color: var(--stamp); }
+  .tag.url { color: var(--ink-soft); }
+  .tag.call { color: var(--teal); }
+  .evidence-card .raw {
+    font-size: 12.5px;
+    color: var(--text-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .remove-btn { background: none; border: none; color: var(--text-soft); font-size: 12px; }
+  .remove-btn:hover { color: var(--stamp); }
+
+  .field-chip {
+    display: inline-flex;
+    gap: 5px;
+    font-size: 11.5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin: 3px 6px 0 0;
+  }
+  .field-chip b { color: var(--text-soft); font-weight: 500; }
+
+  .extract-row {
+    border-bottom: 1px dashed var(--border);
+    padding: 14px 0;
+  }
+  .extract-row:last-child { border-bottom: none; }
+  .extract-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 10px; margin-top: 10px; }
+  .extract-fields label { font-size: 10px; text-transform: uppercase; color: var(--text-soft); display:block; margin-bottom:4px; }
+  .extract-fields input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 3px; padding: 7px 8px; font-size: 12.5px;
+  }
+
+  .timeline { position: relative; padding-left: 26px; margin-top: 10px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 2px;
+    background: var(--border);
+  }
+  .tl-item { position: relative; margin-bottom: 20px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -22px; top: 5px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--stamp); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--stamp);
+  }
+  .tl-time { font-size: 11.5px; color: var(--stamp); font-weight: 600; }
+  .tl-card {
+    margin-top: 4px; border: 1px solid var(--border); border-radius: 3px;
+    padding: 10px 12px; background: var(--bg);
+  }
+  .tl-empty, .empty-note {
+    color: var(--text-soft); font-size: 12.5px; border: 1px dashed var(--border);
+    padding: 20px; border-radius: 4px; text-align: center;
+  }
+
+  .checklist { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .checklist .row {
+    display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
+    border-radius: 3px; padding: 8px 12px; font-size: 12.5px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .dot.ok { background: var(--teal); }
+  .dot.missing { background: var(--amber); }
+  .row .ev-name { color: var(--text-soft); font-size: 11px; margin-left: auto; }
+
+  .contradiction {
+    border: 1px solid var(--stamp);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: color-mix(in srgb, var(--stamp) 8%, var(--surface));
+  }
+  .contradiction .flag-label { color: var(--stamp); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+
+  .redact-item { display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid var(--border); border-radius:3px; padding:10px 12px; margin-bottom:8px; }
+  .redact-item .val { font-size: 12.5px; }
+  .redact-item .val.hidden-val { background: var(--redact); color: var(--redact); border-radius: 2px; padding: 1px 6px; user-select: none; }
+  .switch { position: relative; width: 38px; height: 20px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track { position:absolute; inset:0; background: var(--border); border-radius: 20px; transition: .15s; }
+  .switch .track::before { content:""; position:absolute; height:14px; width:14px; left:3px; top:3px; background: var(--surface); border-radius:50%; transition:.15s; }
+  .switch input:checked + .track { background: var(--stamp); }
+  .switch input:checked + .track::before { transform: translateX(18px); }
+
+  .report-sheet { border: 1px solid var(--border); border-radius: 4px; padding: 20px; background: var(--bg); }
+  .report-sheet h3 { font-size: 15px; margin-bottom: 8px; color: var(--stamp); }
+  .report-block { margin-bottom: 18px; }
+  .report-line { font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+  .report-line:last-child { border-bottom: none; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;
+  }
+  .footer-nav .step-count { color: var(--text-soft); font-size: 11.5px; }
+  .top-actions { display:flex; gap: 8px; flex-wrap: wrap; }
+  .hint { font-size: 11.5px; color: var(--text-soft); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="masthead">
+    <div class="title-block">
+      <h1>Case File</h1>
+      <div class="sub">Fraud Incident Evidence Organizer — prototype build</div>
+    </div>
+    <div class="case-stamp" id="caseStamp">CASE #F-0001</div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" id="rail"></nav>
+    <main class="sheet" id="sheet"></main>
+  </div>
+</div>
+
+<script>
+// ---------- Sample seed data so reviewers see something immediately ----------
+const SAMPLE = [
+  { id: "e1", type: "message", raw: "Hi, this is HDFC Bank security. Your card will be blocked in 1 hour. Verify now: http://hdfc-verify-secure.tk to avoid suspension. Call us at 9876543210 if urgent." },
+  { id: "e2", type: "url", raw: "Visited http://hdfc-verify-secure.tk at 10:35 AM, page asked for card number and OTP." },
+  { id: "e3", type: "transaction", raw: "Transaction alert: Rs.5,000 debited from account XXXX4521 at 10:45 AM to unknown merchant." },
+  { id: "e4", type: "message", raw: "11:00 AM — Same number 9876543210 texted again asking for another Rs.8,000 payment to 'unlock' the account." }
+];
+
+let state = {
+  step: 0,
+  evidence: SAMPLE.map(mkEvidence),
+  redactOn: { phone: true, account: true, url: false },
+  ai: { loading: false, result: null, error: null },
+  db: { saved: false, incidentId: null, error: null }
+};
+
+function mkEvidence(seed) {
+  return {
+    id: seed.id || ("e" + Math.random().toString(36).slice(2, 8)),
+    type: seed.type || "message",
+    raw: seed.raw || "",
+    fields: extractFields(seed.raw || "")
+  };
+}
+
+// ---------- naive client-side extraction (swap for real backend later) ----------
+function extractFields(text) {
+  const time = (text.match(/\b\d{1,2}:\d{2}\s?(AM|PM|am|pm)?\b/) || [])[0] || "";
+  const amount = (text.match(/(?:Rs\.?\s?|₹)\s?[\d,]+(?:\.\d+)?/) || [])[0] || "";
+  const phone = (text.match(/\b\d{10}\b/) || [])[0] || "";
+  const url = (text.match(/https?:\/\/[^\s]+/) || [])[0] || "";
+  const account = (text.match(/\b[A-Z]{2,6}\d{2,6}[X\d]{2,6}\b|\bXXXX\d{3,6}\b/) || [])[0] || "";
+  return {
+    time: time,
+    amount: amount,
+    phone: phone,
+    url: url,
+    account: account
+  };
+}
+
+const STEPS = [
+  { key: "intake", label: "Unorganized Evidence" },
+  { key: "extract", label: "Information Extraction" },
+  { key: "timeline", label: "Chronological Timeline" },
+  { key: "gaps", label: "Missing Information" },
+  { key: "contradictions", label: "Contradiction Detection" },
+  { key: "redact", label: "Redaction" },
+  { key: "report", label: "Incident Report" }
+];
+
+const REQUIRED_FIELDS = [
+  { key: "time", label: "Date / Time" },
+  { key: "amount", label: "Amount" },
+  { key: "phone", label: "Sender contact" },
+  { key: "url", label: "URL" }
+];
+
+const BACKEND_URL = "http://localhost:5000";
+
+async function analyzeWithBackend() {
+  state.ai.loading = true;
+  state.ai.error = null;
+  state.db.error = null;
+  render();
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/analyze-incident`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        evidence: state.evidence.map(ev => ({
+          id: ev.id,
+          type: ev.type,
+          raw: ev.raw,
+          fields: ev.fields
+        }))
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Backend analysis failed");
+
+    state.ai.result = data;
+    state.db.saved = !!data.database?.saved;
+    state.db.incidentId = data.database?.incident_id || null;
+    state.db.error = data.database?.error || null;
+  } catch (err) {
+    state.ai.error = err.message || "Could not connect to backend";
+  } finally {
+    state.ai.loading = false;
+    render();
+  }
+}
+
+function render() {
+  renderRail();
+  renderSheet();
+}
+
+function renderRail() {
+  const rail = document.getElementById("rail");
+  rail.innerHTML = "";
+  STEPS.forEach((s, i) => {
+    const btn = document.createElement("button");
+    btn.className = "step" + (i === state.step ? " active" : "");
+    btn.innerHTML = `<span class="n">${String(i+1).padStart(2,"0")}</span>
+      <span>
+        <div class="label">${s.label}</div>
+        ${i === 3 && gapsCount() > 0 ? `<div class="flag">${gapsCount()} gap${gapsCount()>1?'s':''} flagged</div>` : ""}
+        ${i === 4 && contradictions().length > 0 ? `<div class="flag">${contradictions().length} conflict${contradictions().length>1?'s':''}</div>` : ""}
+      </span>`;
+    btn.onclick = () => { state.step = i; render(); };
+    rail.appendChild(btn);
+  });
+}
+
+function gapsCount() {
+  let n = 0;
+  state.evidence.forEach(ev => {
+    REQUIRED_FIELDS.forEach(f => { if (!ev.fields[f.key]) n++; });
+  });
+  return n;
+}
+
+function contradictions() {
+  // demo rule: same URL mentioned with two different amounts across evidence
+  const byUrl = {};
+  state.evidence.forEach(ev => {
+    if (ev.fields.url) {
+      byUrl[ev.fields.url] = byUrl[ev.fields.url] || new Set();
+      if (ev.fields.amount) byUrl[ev.fields.url].add(ev.fields.amount);
+    }
+  });
+  const flags = [];
+  Object.entries(byUrl).forEach(([url, amounts]) => {
+    if (amounts.size > 1) flags.push({ type: "amount-mismatch", url, amounts: [...amounts] });
+  });
+  // demo rule: two separate payment amounts recorded overall (possible repeat-victimization pattern)
+  const distinctAmounts = [...new Set(state.evidence.map(e => e.fields.amount).filter(Boolean))];
+  if (distinctAmounts.length > 1) {
+    flags.push({ type: "multiple-payments", amounts: distinctAmounts });
+  }
+  return flags;
+}
+
+function maskValue(v) {
+  if (!v) return v;
+  return v.slice(0, 2) + "•".repeat(Math.max(3, v.length - 2));
+}
+
+function applyRedaction(ev) {
+  const f = { ...ev.fields };
+  if (state.redactOn.phone && f.phone) f.phone = maskValue(f.phone);
+  if (state.redactOn.account && f.account) f.account = maskValue(f.account);
+  if (state.redactOn.url && f.url) f.url = maskValue(f.url);
+  return f;
+}
+
+function renderSheet() {
+  const sheet = document.getElementById("sheet");
+  const key = STEPS[state.step].key;
+  sheet.innerHTML = "";
+
+  const heading = document.createElement("div");
+  heading.innerHTML = `<h2>${STEPS[state.step].label}</h2>`;
+  sheet.appendChild(heading);
+
+  if (key === "intake") renderIntake(sheet);
+  if (key === "extract") renderExtract(sheet);
+  if (key === "timeline") renderTimeline(sheet);
+  if (key === "gaps") renderGaps(sheet);
+  if (key === "contradictions") renderContradictions(sheet);
+  if (key === "redact") renderRedact(sheet);
+  if (key === "report") renderReport(sheet);
+
+  renderFooter(sheet);
+}
+
+function renderIntake(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Add every piece of raw evidence — a message, a screenshot's transcribed text, a transaction line, a URL, or a call log entry. Don't worry about order or formatting yet.";
+  sheet.appendChild(lede);
+
+  const form = document.createElement("div");
+  form.innerHTML = `
+    <div class="grid2">
+      <div class="field-row">
+        <label>Evidence type</label>
+        <select id="newType">
+          <option value="message">Chat message</option>
+          <option value="screenshot">Screenshot text</option>
+          <option value="transaction">Transaction</option>
+          <option value="url">URL</option>
+          <option value="call">Call log</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Raw content</label>
+      <textarea id="newRaw" placeholder="Paste the message, transaction line, or describe the screenshot..."></textarea>
+    </div>
+    <button class="btn" id="addBtn">+ Add to case</button>
+  `;
+  sheet.appendChild(form);
+
+  sheet.querySelector("#addBtn").onclick = () => {
+    const type = sheet.querySelector("#newType").value;
+    const raw = sheet.querySelector("#newRaw").value.trim();
+    if (!raw) return;
+    state.evidence.push(mkEvidence({ type, raw }));
+    render();
+  };
+
+  const list = document.createElement("div");
+  list.className = "evidence-list";
+  if (state.evidence.length === 0) {
+    list.innerHTML = `<div class="empty-note">No evidence added yet.</div>`;
+  }
+  state.evidence.forEach(ev => {
+    const card = document.createElement("div");
+    card.className = "evidence-card";
+    card.innerHTML = `
+      <div class="meta">
+        <span class="tag ${ev.type}">${ev.type}</span>
+        <button class="remove-btn" data-id="${ev.id}">remove ✕</button>
+      </div>
+      <div class="raw">${escapeHtml(ev.raw)}</div>
+    `;
+    card.querySelector(".remove-btn").onclick = () => {
+      state.evidence = state.evidence.filter(e => e.id !== ev.id);
+      render();
+    };
+    list.appendChild(card);
+  });
+  sheet.appendChild(list);
+}
+
+function renderExtract(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Quick local extraction is shown here. Use the AI analysis button in the report step for backend-powered analysis.";
+  sheet.appendChild(lede);
+
+  if (state.evidence.length === 0) {
+    sheet.appendChild(emptyNote("Add evidence in step 1 first."));
+    return;
+  }
+
+  state.evidence.forEach(ev => {
+    const row = document.createElement("div");
+    row.className = "extract-row";
+    row.innerHTML = `
+      <div><span class="tag ${ev.type}">${ev.type}</span></div>
+      <div class="raw" style="margin-top:6px;">${escapeHtml(ev.raw)}</div>
+      <div class="extract-fields">
+        ${["time","amount","phone","url","account"].map(k => `
+          <div>
+            <label>${labelFor(k)}</label>
+            <input type="text" data-id="${ev.id}" data-field="${k}" value="${escapeAttr(ev.fields[k])}" placeholder="—" />
+          </div>
+        `).join("")}
+      </div>
+    `;
+    row.querySelectorAll("input").forEach(inp => {
+      inp.oninput = (e) => {
+        const id = e.target.dataset.id, field = e.target.dataset.field;
+        const item = state.evidence.find(x => x.id === id);
+        item.fields[field] = e.target.value;
+        renderRail();
+      };
+    });
+    sheet.appendChild(row);
+  });
+}
+
+function labelFor(k) {
+  return { time: "Date / time", amount: "Amount", phone: "Phone", url: "URL", account: "Account ref" }[k];
+}
+
+function renderTimeline(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Evidence ordered by extracted time. Items without a time are listed at the end.";
+  sheet.appendChild(lede);
+
+  const withTime = state.evidence.filter(e => e.fields.time);
+  const withoutTime = state.evidence.filter(e => !e.fields.time);
+  const sorted = [...withTime].sort((a,b) => timeToMinutes(a.fields.time) - timeToMinutes(b.fields.time));
+
+  if (state.evidence.length === 0) {
+    sheet.appendChild(emptyNote("No evidence yet — go back to step 1."));
+    return;
+  }
+
+  const tl = document.createElement("div");
+  tl.className = "timeline";
+  [...sorted, ...withoutTime].forEach(ev => {
+    const item = document.createElement("div");
+    item.className = "tl-item";
+    item.innerHTML = `
+      <div class="tl-time">${ev.fields.time || "Time unknown"}</div>
+      <div class="tl-card">
+        <span class="tag ${ev.type}">${ev.type}</span>
+        <div style="margin-top:6px; font-size:12.5px;">${escapeHtml(ev.raw)}</div>
+        <div style="margin-top:8px;">
+          ${ev.fields.amount ? chip("amount", ev.fields.amount) : ""}
+          ${ev.fields.phone ? chip("phone", ev.fields.phone) : ""}
+          ${ev.fields.url ? chip("url", ev.fields.url) : ""}
+        </div>
+      </div>
+    `;
+    tl.appendChild(item);
+  });
+  sheet.appendChild(tl);
+}
+
+function chip(label, val) {
+  return `<span class="field-chip"><b>${label}:</b> ${escapeHtml(val)}</span>`;
+}
+
+function timeToMinutes(t) {
+  const m = t.match(/(\d{1,2}):(\d{2})\s?(AM|PM|am|pm)?/);
+  if (!m) return 9999;
+  let h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  const mer = (m[3]||"").toUpperCase();
+  if (mer === "PM" && h < 12) h += 12;
+  if (mer === "AM" && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function renderGaps(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Every incident report needs these fields. Anything marked missing should be filled in on the extraction step, or noted as unavailable in the final report.";
+  sheet.appendChild(lede);
+
+  if (state.evidence.length === 0) {
+    sheet.appendChild(emptyNote("No evidence yet — go back to step 1."));
+    return;
+  }
+
+  state.evidence.forEach(ev => {
+    const wrap = document.createElement("div");
+    wrap.style.marginBottom = "16px";
+    wrap.innerHTML = `<div style="font-size:12px; color:var(--text-soft); margin-bottom:6px;">
+      <span class="tag ${ev.type}">${ev.type}</span> — ${escapeHtml(ev.raw.slice(0,60))}${ev.raw.length>60?'…':''}
+    </div>`;
+    const checklist = document.createElement("div");
+    checklist.className = "checklist";
+    REQUIRED_FIELDS.forEach(f => {
+      const present = !!ev.fields[f.key];
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<span class="dot ${present ? 'ok' : 'missing'}"></span>
+        <span>${f.label}</span>
+        <span class="ev-name">${present ? escapeHtml(ev.fields[f.key]) : "missing"}</span>`;
+      checklist.appendChild(row);
+    });
+    wrap.appendChild(checklist);
+    sheet.appendChild(wrap);
+  });
+}
+
+function renderContradictions(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Automatic checks compare related evidence for inconsistencies. This demo checks amounts tied to the same URL, and flags multiple distinct payment amounts overall.";
+  sheet.appendChild(lede);
+
+  const flags = contradictions();
+  if (flags.length === 0) {
+    sheet.appendChild(emptyNote("No contradictions detected yet."));
+    return;
+  }
+  flags.forEach(f => {
+    const box = document.createElement("div");
+    box.className = "contradiction";
+    if (f.type === "amount-mismatch") {
+      box.innerHTML = `<div class="flag-label">Amount mismatch</div>
+        <div style="margin-top:6px; font-size:12.5px;">The same URL <b>${escapeHtml(f.url)}</b> is linked to different amounts: ${f.amounts.map(a=>escapeHtml(a)).join(", ")}.</div>`;
+    } else if (f.type === "multiple-payments") {
+      box.innerHTML = `<div class="flag-label">Multiple payments recorded</div>
+        <div style="margin-top:6px; font-size:12.5px;">Distinct amounts appear across the evidence: ${f.amounts.map(a=>escapeHtml(a)).join(", ")}. Confirm whether these are separate payment requests or a data entry error.</div>`;
+    }
+    sheet.appendChild(box);
+  });
+}
+
+function renderRedact(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Choose which sensitive fields to mask before the report is shared or filed. This only changes how the final report displays them — nothing is deleted.";
+  sheet.appendChild(lede);
+
+  const toggles = document.createElement("div");
+  toggles.style.marginBottom = "18px";
+  [["phone","Phone numbers"],["account","Account references"],["url","URLs"]].forEach(([k,label]) => {
+    const row = document.createElement("div");
+    row.className = "redact-item";
+    row.innerHTML = `<span>${label}</span>
+      <label class="switch"><input type="checkbox" data-k="${k}" ${state.redactOn[k] ? "checked":""}><span class="track"></span></label>`;
+    row.querySelector("input").onchange = (e) => {
+      state.redactOn[e.target.dataset.k] = e.target.checked;
+      renderSheet();
+    };
+    toggles.appendChild(row);
+  });
+  sheet.appendChild(toggles);
+
+  state.evidence.forEach(ev => {
+    const f = applyRedaction(ev);
+    const row = document.createElement("div");
+    row.className = "evidence-card";
+    row.style.marginBottom = "10px";
+    row.innerHTML = `
+      <span class="tag ${ev.type}">${ev.type}</span>
+      <div style="margin-top:8px;">
+        ${f.phone ? chip("phone", f.phone) : ""}
+        ${f.account ? chip("account", f.account) : ""}
+        ${f.url ? chip("url", f.url) : ""}
+        ${f.amount ? chip("amount", f.amount) : ""}
+      </div>
+    `;
+    sheet.appendChild(row);
+  });
+}
+
+function renderReport(sheet) {
+  const lede = document.createElement("div");
+  lede.className = "lede";
+  lede.textContent = "Final structured summary, respecting your redaction choices. Print or copy this for filing.";
+  sheet.appendChild(lede);
+
+  const actions = document.createElement("div");
+  actions.className = "top-actions";
+  actions.style.marginBottom = "14px";
+  actions.innerHTML = `<button class="btn" id="analyzeBtn">${state.ai.loading ? "⏳ Analyzing..." : "🤖 Analyze with AI"}</button><button class="btn secondary" id="printBtn">🖨 Print / Save as PDF</button>`;
+  sheet.appendChild(actions);
+  actions.querySelector("#printBtn").onclick = () => window.print();
+  actions.querySelector("#analyzeBtn").onclick = () => analyzeWithBackend();
+  if (state.ai.error) {
+    const err = document.createElement("div");
+    err.className = "empty-note";
+    err.style.marginBottom = "14px";
+    err.textContent = `Backend error: ${state.ai.error}`;
+    sheet.appendChild(err);
+  }
+
+  const report = document.createElement("div");
+  report.className = "report-sheet";
+
+  const sorted = [...state.evidence].sort((a,b) => timeToMinutes(a.fields.time) - timeToMinutes(b.fields.time));
+
+  report.innerHTML = `
+    <div class="report-block">
+      <h3>Timeline</h3>
+      ${sorted.map(ev => {
+        const f = applyRedaction(ev);
+        return `<div class="report-line">${f.time || "Time unknown"} — ${ev.type}: ${escapeHtml(ev.raw)}</div>`;
+      }).join("")}
+    </div>
+    <div class="report-block">
+      <h3>Missing information</h3>
+      ${gapsCount() === 0
+        ? `<div class="report-line">No missing required fields.</div>`
+        : state.evidence.map(ev => {
+            const missing = REQUIRED_FIELDS.filter(f => !ev.fields[f.key]).map(f=>f.label);
+            return missing.length ? `<div class="report-line">${ev.type}: missing ${missing.join(", ")}</div>` : "";
+          }).join("")
+      }
+    </div>
+    <div class="report-block">
+      <h3>Contradictions</h3>
+      ${contradictions().length === 0
+        ? `<div class="report-line">None detected.</div>`
+        : contradictions().map(f => `<div class="report-line">${f.type === "amount-mismatch" ? `Amount mismatch for ${escapeHtml(f.url)}: ${f.amounts.join(", ")}` : `Multiple distinct amounts: ${f.amounts.join(", ")}`}</div>`).join("")
+      }
+    </div>
+  `;
+  if (state.ai.result) {
+    const ai = state.ai.result;
+    const aiBlock = document.createElement("div");
+    aiBlock.className = "report-sheet";
+    aiBlock.style.marginTop = "14px";
+
+    const incidentReportText =
+      typeof ai.incident_report === "string"
+        ? ai.incident_report
+        : JSON.stringify(ai.incident_report || {}, null, 2);
+
+    const missingText =
+      typeof ai.missing_information === "string"
+        ? ai.missing_information
+        : JSON.stringify(ai.missing_information || [], null, 2);
+
+    const contradictionsText =
+      typeof ai.contradictions === "string"
+        ? ai.contradictions
+        : JSON.stringify(ai.contradictions || [], null, 2);
+
+    aiBlock.innerHTML = `
+      <div class="report-block">
+        <h3>AI Analysis — Backend</h3>
+        <div class="report-line" style="white-space:pre-wrap;">${escapeHtml(incidentReportText)}</div>
+      </div>
+      <div class="report-block">
+        <h3>AI Missing Information</h3>
+        <div class="report-line" style="white-space:pre-wrap;">${escapeHtml(missingText || "None reported.")}</div>
+      </div>
+      <div class="report-block">
+        <h3>AI Contradictions</h3>
+        <div class="report-line" style="white-space:pre-wrap;">${escapeHtml(contradictionsText || "None reported.")}</div>
+      </div>
+      <div class="report-block">
+        <h3>Database</h3>
+        <div class="report-line">
+          ${state.db.saved
+            ? `✓ Case saved successfully — Incident ID: ${escapeHtml(String(state.db.incidentId))}`
+            : `Database save not completed${state.db.error ? ` — ${escapeHtml(state.db.error)}` : "."}`}
+        </div>
+      </div>`;
+    sheet.appendChild(aiBlock);
+  }
+
+  sheet.appendChild(report);
+}
+
+function emptyNote(text) {
+  const d = document.createElement("div");
+  d.className = "empty-note";
+  d.textContent = text;
+  return d;
+}
+
+function renderFooter(sheet) {
+  const footer = document.createElement("div");
+  footer.className = "footer-nav";
+  footer.innerHTML = `
+    <button class="btn secondary" id="prevBtn" ${state.step === 0 ? "disabled" : ""}>← Back</button>
+    <span class="step-count">Step ${state.step + 1} of ${STEPS.length}</span>
+    <button class="btn" id="nextBtn" ${state.step === STEPS.length - 1 ? "disabled" : ""}>Next →</button>
+  `;
+  footer.querySelector("#prevBtn").onclick = () => { state.step = Math.max(0, state.step - 1); render(); };
+  footer.querySelector("#nextBtn").onclick = () => { state.step = Math.min(STEPS.length - 1, state.step + 1); render(); };
+  sheet.appendChild(footer);
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+render();
+</script>
+</body>
+</html>
